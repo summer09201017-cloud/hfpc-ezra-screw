@@ -12,7 +12,7 @@
 import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, binsFor, trayFor } from '../levels.js';
 import { tightestSpacing, colorsOf, L } from '../layout.js';
 import { pointInPoly } from '../rules.js';
-import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey } from '../rules.js';
+import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey, canPlace } from '../rules.js';
 
 const args = process.argv.slice(2);
 const WANT_PATH = args.includes('--path');
@@ -94,7 +94,10 @@ function playout(level, idx, pickFn, bins, tray) {
   const st = initState(level, bins, tray);
   for (;;) {
     if (isWon(st)) return true;
-    const ex = exposedScrews(idx, st);
+    // ★ 拒絕制語意(2026-07-26 帶重校):點到放不進的器皿只是被擋、不算輸——
+    //   bot 也只從「拔得出且放得進」的裡面挑;真卡死=一根都挑不出(與遊戲 isStuck 同語意)。
+    //   舊制(點錯即死)會系統性高估卡死率,拒絕制上線後量出來的帶全是虛胖。
+    const ex = exposedScrews(idx, st).filter((id) => canPlace(st, idx.screw.get(id).color));
     if (!ex.length) return false;
     const res = removeScrew(idx, st, pickFn(ex, st, idx));
     if (!res.ok) return false;
@@ -129,8 +132,11 @@ function difficulty(level, bins, tray, runs = 400) {
 //     兒童:會想 ≤25%(多一個擔子好轉身)   幼稚園:會想 ≤10%(幾乎不該卡)
 //   教學關(level.teaching)例外:它的任務是教規則,0% 卡死是對的。
 // 0726 使用者玩過堆疊第一版後點名「還要再加難度」→ 帶整段上移(gen-pile.mjs 同步)
+// ★ 0726 帶重校(拒絕制語意):bot 只挑「放得進」的之後,躺平≈會想(過濾本身就是遊戲把關),
+//   randMin 0.5 是「點錯即死」時代的殘留 → 降為 0.25 當「這關真的有次序考驗」的地板;
+//   會想 30~55% 續用——新語意下這代表「真卡死」率,想一下也常失手,正是要的手感。
 const BAND = {
-  teen:   { max: 0.55, min: 0.30, randMin: 0.5, why: '青少年' },
+  teen:   { max: 0.55, min: 0.30, randMin: 0.25, why: '青少年' },
   kids:   { max: 0.30, min: 0,    randMin: 0,   why: '兒童' },
   kinder: { max: 0.10, min: 0,    randMin: 0,   why: '幼稚園' },
 };
