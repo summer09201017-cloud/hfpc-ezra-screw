@@ -100,10 +100,11 @@
     display:flex;align-items:center;justify-content:center;gap:6px;background:#1c150f;
     transition:border-color .2s ease,background-color .2s ease}
   .bin.taken{border-style:solid}
-  /* ★ 抬走動畫(2026-07-26 使用者點名):滿三件的箱子=祭司抬去過秤——整箱上飄+淡出,
-     tap() 的 setTimeout 0.7s 後重畫成空箱;reduced-motion 由下面的全域規則整個關掉。 */
-  @keyframes carryUp{to{transform:translateY(-34px) rotate(-3deg);opacity:0}}
-  .bin.carried{animation:carryUp .65s ease-in forwards;pointer-events:none}
+  /* ★ 抬走動畫(2026-07-26 使用者點名;0727 使用者拍板:往右抬走一段距離,不要往上):
+     滿三件的箱子=祭司抬去過秤——整箱往右移+淡出,tap() 的 setTimeout 0.7s 後重畫成空箱;
+     reduced-motion 由下面的全域規則整個關掉。 */
+  @keyframes carryAway{to{transform:translateX(76px) rotate(2deg);opacity:0}}
+  .bin.carried{animation:carryAway .65s ease-in forwards;pointer-events:none}
   .slot{width:22px;height:22px;border-radius:50%;background:#2c2318;border:2px solid rgba(0,0,0,.35)}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grow{flex:1}
