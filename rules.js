@@ -97,7 +97,7 @@ export function removeScrew(idx, state, screwId) {
   let toTray = false;
   if (!placeInBin(state, s.color)) {
     if (state.tray && state.tray.items.length < state.tray.cap) { state.tray.items.push(s.color); toTray = true; }
-    else { state.lost = true; return { ok: false, lost: true }; }
+    else return { ok: false, full: true };   // 拒絕這一下,不判死——真卡死由 isStuck 統一判
   }
   state.screws.delete(screwId);
   const rest = idx.onBoard.get(s.board).some((id) => state.screws.has(id));
@@ -139,18 +139,20 @@ export function flushTray(state) {
 
 export const isWon = (state) => state.screws.size === 0;
 
+/** 這個顏色現在放得進去嗎?(同色箱有位/有空箱/托盤有位) */
+export function canPlace(state, color) {
+  if (state.bins.some((b) => b && b.color === color && b.count < BIN_SIZE)) return true;
+  if (state.bins.some((b) => b === null)) return true;
+  return !!(state.tray && state.tray.items.length < state.tray.cap);
+}
+
 /** 卡住 = 還有螺絲、但一根都拔不出來(或擔子爆了) */
 export function isStuck(idx, state) {
   if (state.lost) return true;
   if (isWon(state)) return false;
   const ex = exposedScrews(idx, state);
   if (ex.length === 0) return true;
-  if (state.tray && state.tray.items.length < state.tray.cap) return false;   // 托盤還有位子
-  if (state.bins.some((b) => b === null)) return false;                       // 還有空箱
-  return !ex.some((id) => {
-    const c = idx.screw.get(id).color;
-    return state.bins.some((b) => b && b.color === c && b.count < BIN_SIZE);
-  });
+  return !ex.some((id) => canPlace(state, idx.screw.get(id).color));
 }
 
 /** 深拷貝(solver 用;只有原始型別與小集合,手寫比 structuredClone 快) */

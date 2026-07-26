@@ -434,7 +434,7 @@ function tap(id, open) {
   const before = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);   // 音效用:扛走=總數變少
   const r = removeScrew(idx, state, id);
   fallingId = r.boardCleared || null;   // 這一拔讓哪片板子掉了 → 給掉落動畫用
-  if (!r.ok) { draw(); return lose('箱子都被別的種類佔著、托盤也滿了——「警醒看守」就是要看準了才拿(拉 8:29)。'); }
+  if (!r.ok) { sfx.locked(); say('這件現在放不進箱子、托盤也滿了——先拿放得進的。', 'bad'); return; }
   const after = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);
   if (after < before) sfx.carry();      // 滿三件同類,祭司抬去過秤了
   else sfx.pull();
@@ -443,7 +443,7 @@ function tap(id, open) {
   draw();
   fallingId = null;   // 動畫已排程,清掉免得下次重畫又演一次
   if (isWon(state)) return win();
-  if (isStuck(idx, state)) return lose('沒有一根拔得出來了。');
+  if (isStuck(idx, state)) return lose('沒有一件拿得動了——箱子和托盤都滿。「警醒看守」(拉 8:29):看準了才拿!');
   say('', '');
 }
 
