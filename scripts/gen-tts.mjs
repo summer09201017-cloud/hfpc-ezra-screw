@@ -27,7 +27,7 @@ mkdirSync(OUT, { recursive: true });
 const VOICE = 'zh-TW-HsiaoChenNeural'; // 曉臻:HFPC 經文旁白慣例
 
 // 要烤的固定句 = 每關經文(含出處)+ 每關提示 + 一句玩法簡介(給不識字的幼兒)
-const HOWTO = '把器皿一件一件拿起來,放進下面的箱子。上面還有東西壓著的,要先把上面的拿掉。同一個箱子裝滿三件同類的,祭司就抬去過秤了。';
+const HOWTO = '把器皿一件一件拿起來,放進下面的箱子。上面還有東西壓著的,要先把上面的拿掉。同一個箱子裝滿三件同類的,祭司就抬去過秤了。放不進箱子的,可以先擱在托盤,等同類的箱子開了會自動歸箱。';
 const LINES = [HOWTO];
 for (const l of LEVELS) {
   LINES.push(verseLine(l.ref, l.verse));   // 出處唸成「第四章第二十五節」,不是「4 點 25 分」

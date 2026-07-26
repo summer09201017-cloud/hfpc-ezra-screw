@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { RAW, binsFor, AGE } from '../levels.js';
+import { RAW, binsFor, trayFor, AGE } from '../levels.js';
 import { makePoly, tightestSpacing, norm, L } from '../layout.js';
 import { indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey, pointInPoly } from '../rules.js';
 
@@ -96,7 +96,7 @@ function tryLayout(raw, rnd) {
 }
 
 // ── 可解性 + 兩隻 bot(與 solver.mjs 同一套規則,rules.js 只有一份)──
-function solvable(level, bins, budget = 400000) {
+function solvable(level, bins, tray, budget = 400000) {
   const idx = indexLevel(level); const seen = new Set(); let nn = 0;
   const dfs = (st) => {
     if (isWon(st)) return true;
@@ -108,12 +108,12 @@ function solvable(level, bins, budget = 400000) {
     }
     return false;
   };
-  return dfs(initState(level, bins));
+  return dfs(initState(level, bins, tray));
 }
-function bots(level, bins, runs, rnd) {
+function bots(level, bins, tray, runs, rnd) {
   const idx = indexLevel(level);
   const pick = (a) => a[Math.floor(rnd() * a.length) % a.length];
-  const play = (p) => { const st = initState(level, bins);
+  const play = (p) => { const st = initState(level, bins, tray);
     for (;;) { if (isWon(st)) return true; const ex = exposedScrews(idx, st);
       if (!ex.length) return false; if (!removeScrew(idx, st, p(ex, st)).ok) return false; } };
   let R = 0, G = 0;
@@ -136,14 +136,14 @@ function search(raw) {
     // 關卡可帶自己的下限(raw.teenMin):第五站全是細長件,幾何上埋不到 30%,退而求其次
     const tMin = raw.teenMin ?? BAND.teen.min;
     const mrnd = lcg(20260726);                        // 量測用固定種子=迴歸基準
-    const teen = bots(lv, binsFor(lv, 'teen'), 140, mrnd);
+    const teen = bots(lv, binsFor(lv, 'teen'), trayFor('teen'), 140, mrnd);
     if (!raw.teaching && (teen.G < tMin - 0.03 || teen.G > BAND.teen.max + 0.03)) { why.band++; continue; } // 粗篩
-    const teenF = raw.teaching ? teen : bots(lv, binsFor(lv, 'teen'), 500, lcg(20260726));
+    const teenF = raw.teaching ? teen : bots(lv, binsFor(lv, 'teen'), trayFor('teen'), 500, lcg(20260726));
     if (!raw.teaching && (teenF.G < tMin || teenF.G > BAND.teen.max || teenF.R < BAND.teen.randMin)) { why.band++; continue; }
-    const kids = bots(lv, binsFor(lv, 'kids'), 400, lcg(1));
-    const kinder = bots(lv, binsFor(lv, 'kinder'), 400, lcg(2));
+    const kids = bots(lv, binsFor(lv, 'kids'), trayFor('kids'), 400, lcg(1));
+    const kinder = bots(lv, binsFor(lv, 'kinder'), trayFor('kinder'), 400, lcg(2));
     if (!raw.teaching && (kids.G > BAND.kids.max || kinder.G > BAND.kinder.max)) { why.ageBand++; continue; }
-    if (!Object.values(AGE).every((a) => solvable(lv, binsFor(lv, a.id)))) { why.unsolvable++; continue; }
+    if (!Object.values(AGE).every((a) => solvable(lv, binsFor(lv, a.id), trayFor(a.id)))) { why.unsolvable++; continue; }
 
     return { lv, t, teen: teenF, kids, kinder };
   }
