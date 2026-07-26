@@ -100,6 +100,10 @@
     display:flex;align-items:center;justify-content:center;gap:6px;background:#1c150f;
     transition:border-color .2s ease,background-color .2s ease}
   .bin.taken{border-style:solid}
+  /* ★ 抬走動畫(2026-07-26 使用者點名):滿三件的箱子=祭司抬去過秤——整箱上飄+淡出,
+     tap() 的 setTimeout 0.7s 後重畫成空箱;reduced-motion 由下面的全域規則整個關掉。 */
+  @keyframes carryUp{to{transform:translateY(-34px) rotate(-3deg);opacity:0}}
+  .bin.carried{animation:carryUp .65s ease-in forwards;pointer-events:none}
   .slot{width:22px;height:22px;border-radius:50%;background:#2c2318;border:2px solid rgba(0,0,0,.35)}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grow{flex:1}
@@ -238,6 +242,7 @@ const HOWTO = '把器皿一件一件拿起來,放進下面的箱子。上面還�
 
 let ageId = 'kids', cleared = new Set(), allUnlocked = false, stars = {};
 let li = 0, level, idx, state, hintId = null, howtoSpoken = false, fallingId = null;
+let carriedBins = [];   // 這一拔被抬走的箱子 [{i,color}] —— 抬走動畫演完(0.7s)就清空重畫
 // 這一次挑戰用了幾次提示、重來幾次 → 決定星星(從地圖進站時歸零,按「重來」不歸零)
 let attempt = { hints: 0, retries: 0 };
 
@@ -322,7 +327,7 @@ function load(i, fresh = true) {
   li = i; level = LEVELS[i]; idx = indexLevel(level);
   setTrack(level.id);   // ★ 每一關不同曲(BGM 百曲庫:同一關永遠同一首)
   state = initState(level, binsFor(level, ageId), trayFor(ageId));
-  hintId = null; fallingId = null;
+  hintId = null; fallingId = null; carriedBins = [];
   $('ageScreen').hidden = true; $('mapScreen').hidden = true; $('gameScreen').hidden = false;
   $('title').textContent = level.name;
   $('ref').textContent = level.ref;
@@ -417,14 +422,17 @@ function drawTray() {
 }
 
 function drawBins() {
-  $('bins').innerHTML = state.bins.map((b) => {
-    const c = b ? COLORS[b.color] : null;
+  $('bins').innerHTML = state.bins.map((b, bi) => {
+    // 抬走中的箱:state 已是 null,畫面上先畫成「滿三件」再演上飄淡出(carried)
+    const carry = !b && carriedBins.find((x) => x.i === bi);   // 動畫未完就被重新佔用 → 以新箱為準,不再演
+    const eff = b || (carry ? { color: carry.color, count: BIN_SIZE } : null);
+    const c = eff ? COLORS[eff.color] : null;
     const slots = Array.from({ length: BIN_SIZE }, (_, i) =>
-      `<span class="slot" style="${b && i < b.count ? `background:${c.hex};border-color:${c.dark}` : ''}"></span>`).join('');
+      `<span class="slot" style="${eff && i < eff.count ? `background:${c.hex};border-color:${c.dark}` : ''}"></span>`).join('');
     // 擔子被某個顏色佔用時,整個框換成那個顏色 → 和上面的橛子一眼對得起來
     const style = c ? `border-color:${c.hex};background:${c.dark}33` : '';
     const label = c ? ` title="${c.tribe}的擔子:${c.name}"` : ' title="空擔子"';
-    return `<div class="bin${b ? ' taken' : ''}" style="${style}"${label}>${slots}</div>`;
+    return `<div class="bin${eff ? ' taken' : ''}${carry ? ' carried' : ''}" style="${style}"${label}>${slots}</div>`;
   }).join('');
 }
 
@@ -440,8 +448,11 @@ function tap(id, open) {
   else sfx.pull();
   if (r.toTray) say('放不進箱子,先擱托盤——同類的箱一開就會自動歸箱。', '');
   if (r.boardCleared) sfx.fall();
+  // 抬走動畫(使用者點名):flushTray 清的箱也走同一條路(clearedBins 已含)
+  carriedBins = r.clearedBins || [];
   draw();
   fallingId = null;   // 動畫已排程,清掉免得下次重畫又演一次
+  if (carriedBins.length) setTimeout(() => { carriedBins = []; if (state) drawBins(); }, 700);
   if (isWon(state)) return win();
   if (isStuck(idx, state)) return lose('沒有一件拿得動了——箱子和托盤都滿。「警醒看守」(拉 8:29):看準了才拿!');
   say('', '');

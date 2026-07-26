@@ -94,6 +94,9 @@ export function placeInBin(state, color) {
 export function removeScrew(idx, state, screwId) {
   if (!isExposed(idx, state, screwId)) return { ok: false };
   const s = idx.screw.get(screwId);
+  // 抬走動畫用:記下每格拔之前裝的顏色,結尾 diff 出「這一拔被抬走的箱子」。
+  // 箱子只會「同色加滿→清空」,不會原地換色,所以 非null→null 就是被抬走。
+  const hadBin = state.bins.map((b) => (b ? b.color : null));
   let toTray = false;
   if (!placeInBin(state, s.color)) {
     if (state.tray && state.tray.items.length < state.tray.cap) { state.tray.items.push(s.color); toTray = true; }
@@ -104,7 +107,9 @@ export function removeScrew(idx, state, screwId) {
   let boardCleared = null;
   if (!rest) { state.boards.delete(s.board); boardCleared = s.board; }
   flushTray(state);
-  return { ok: true, boardCleared, toTray };
+  const clearedBins = [];
+  state.bins.forEach((b, i) => { if (hadBin[i] && !b) clearedBins.push({ i, color: hadBin[i] }); });
+  return { ok: true, boardCleared, toTray, clearedBins };
 }
 
 /**
