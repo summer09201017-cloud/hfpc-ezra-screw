@@ -132,7 +132,9 @@
     box-shadow:0 3px 0 rgba(70,100,40,.35);transition:transform .12s ease}
   /* ★ 首頁滿版(使用者:選單太小、擠最上方):.wrap 本來就是 100dvh 直欄,
      讓年齡畫面吃掉剩餘高度並垂直置中;按鈕加大到後排孩子也看得清。 */
-  #ageScreen{flex:1;display:flex;flex-direction:column;justify-content:center}
+  /* ⚠ display:flex 是作者樣式,會蓋過 hidden 屬性的 UA display:none —— 一定要 :not([hidden]),
+     不然進地圖/進關後年齡選單永遠黏在頁面最上方(0727 使用者回報的正是這隻)。 */
+  #ageScreen:not([hidden]){flex:1;display:flex;flex-direction:column;justify-content:center}
   #ageScreen .age{min-height:128px;padding:18px 12px;border-radius:20px}
   #ageScreen .age b{font-size:28px}
   #ageScreen .age small{font-size:14px;margin-top:6px}

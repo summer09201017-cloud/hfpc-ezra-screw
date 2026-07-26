@@ -25,6 +25,8 @@ const ages = await page.locator('.age').count();
 check(ages === 3, `年齡三檔選單(實得 ${ages})`);
 await page.click('[data-age="kids"]');
 check(await page.locator('#mapScreen').isVisible(), '選完檔位進關卡地圖');
+// ★ 0727 回歸：#ageScreen 的 display:flex 曾蓋過 hidden → 年齡選單黏在每一關最上方
+check(await page.locator('#ageScreen').isHidden(), '進地圖後年齡選單真的收起（不會黏在最上面）');
 const nodes = await page.locator('#map .node').count();
 check(nodes === 6, `地圖列出 6 站(實得 ${nodes})`);
 check((await page.locator('#map .node').first().textContent()).includes('第一站'), '看得到第一站');
