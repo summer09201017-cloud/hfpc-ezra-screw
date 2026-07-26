@@ -1,0 +1,14 @@
+{
+  "name": "以斯拉點交聖殿器皿 · 器皿也為聖",
+  "short_name": "點交器皿",
+  "description": "照以斯拉記的清單點交聖殿器皿,把每一件分進祭司的看守箱——一件都不可少。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241c14",
+  "theme_color": "#2b2118",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

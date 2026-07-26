@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>以斯拉點交聖殿器皿 · 器皿也為聖(以斯拉記 8)</title>
+<meta name="description" content="聖經解謎小遊戲:照以斯拉記的清單點交聖殿器皿,層層打開行囊,把每一件分進祭司的看守箱——一件都不可少。">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2b2118">
+<style>
+  /* ★ 2026-07-26 可愛風改版(使用者點名「太醜、不可愛」,參考雅各的斑點羊):
+     柔和天空→草地的背景 + 太陽、羊皮紙卡片、抹茶綠圓角大按鈕、深棕文字。
+     遊戲舞台(.stage)保留深色——材質(細麻/海狗皮/包金板)是對著深底調的,像從殿門看進庫房。 */
+  :root{
+    --panel:#fdf3da; --ink:#4a3a20; --dim:#8a7a58; --line:#e0cb9a; --warn:#c07f28;
+    --grass:#a5d283; --grass2:#5a7d3d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);
+    background:linear-gradient(180deg,#bfe0f5 0%,#d8ecda 46%,#a5d283 78%,#8fc46e 100%);
+    background-attachment:fixed;
+    font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  body::before{ /* 太陽 */
+    content:"";position:fixed;top:26px;left:18px;width:64px;height:64px;border-radius:50%;
+    background:radial-gradient(circle at 40% 38%,#ffe9a3,#ffd257 62%,rgba(255,210,87,0) 72%);
+    filter:blur(.4px);pointer-events:none}
+  body::after{ /* 雲 */
+    content:"";position:fixed;top:44px;right:12%;width:88px;height:26px;border-radius:99px;background:#fff;opacity:.85;
+    box-shadow:26px 10px 0 6px #fff, -30px 8px 0 2px #fff, 46vw 30px 0 0 rgba(255,255,255,.9);pointer-events:none}
+  .wrap{max-width:720px;margin:0 auto;padding:10px 12px 28px;min-height:100dvh;display:flex;flex-direction:column;gap:10px;position:relative;z-index:1}
+  header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;flex:1;min-width:130px;color:#4a3a20;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+  .btn{background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:14px;
+    padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px;
+    box-shadow:0 2px 0 rgba(90,80,50,.18)}
+  .btn:active{transform:translateY(1px);box-shadow:none}
+  .btn.primary{background:var(--grass);border-color:var(--grass2);color:#2e451c}
+  .btn.on{background:#ffe9b0;border-color:var(--warn)}
+  .btn.sm{padding:8px 12px;font-size:13px;min-height:40px}
+  /* 羊皮紙卡片(斑點羊同款味道) */
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:14px;
+    box-shadow:0 3px 10px rgba(90,70,30,.15)}
+  .verse{background:#fffaf0;border:1px solid var(--line);border-left:4px solid var(--warn);
+    border-radius:10px;padding:9px 12px;font-size:14px;line-height:1.7}
+  .verse b{color:var(--warn)}
+  /* 圓萌吉祥物列:五色器皿臉(呼應遊戲裡的器皿,tsum 式圓臉) */
+  .mascots{display:flex;justify-content:center;gap:14px;padding:6px 0 2px}
+  .mascots i{width:46px;height:46px;border-radius:50%;position:relative;display:inline-block;
+    border:2px solid rgba(0,0,0,.25);box-shadow:inset -4px -6px 0 rgba(0,0,0,.12),0 2px 3px rgba(60,40,10,.25);
+    animation:bob 2.6s ease-in-out infinite}
+  .mascots i:nth-child(2){animation-delay:.3s} .mascots i:nth-child(3){animation-delay:.6s}
+  .mascots i:nth-child(4){animation-delay:.9s} .mascots i:nth-child(5){animation-delay:1.2s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .mascots i::before{ /* 眼睛 */
+    content:"";position:absolute;top:16px;left:11px;width:6px;height:7px;border-radius:50%;background:#3a2a14;
+    box-shadow:18px 0 0 #3a2a14}
+  .mascots i::after{ /* 微笑 */
+    content:"";position:absolute;top:26px;left:17px;width:12px;height:7px;border-radius:0 0 12px 12px;
+    border:2.5px solid #3a2a14;border-top:0}
+  /* ★ 直式 3:4(不是美術偏好):正方形舞台在 44px 螺絲的最小間距下排不出 18 根橛子的關卡。
+     改這個比例要同時改 layout.js 的 STAGE_ASPECT,不然間距檢查會失準。 */
+  .stage{position:relative;width:100%;aspect-ratio:3/4;background:#1c150f;
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  /* 掉落:ease-in(越掉越快)才有重力感;直接線性或 ease-out 看起來像「被吸走」 */
+  /* ★ 標籤畫在「右下角」:同一柱的板往下錯開,露出來的是下緣那條帶子——
+     標籤放上面會被壓在上一片板底下,孩子看不到這片板叫什麼(經文教學就沒了)。 */
+  .board{position:absolute;border-radius:7px;border:2px solid rgba(0,0,0,.45);
+    display:flex;align-items:flex-end;justify-content:flex-end;
+    transition:opacity .5s ease-in, transform .6s cubic-bezier(.55,.06,.9,.28)}
+  .board .tag{font-size:11px;padding:2px 6px;color:#fff;background:rgba(0,0,0,.42);
+    border-radius:5px 0 5px 0;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  /* 拆完的板子掉出畫面外(不是原地消失):往下掉 170% + 微微翻轉 */
+  .board.gone{opacity:0;transform:translateY(170%) rotate(11deg);pointer-events:none}
+  /* 已經掉完的(重畫時)不要再演一次,直接就位 */
+  .board.gone.settled{transition:none}
+  /* ★ 只剩最後一根橛子 → 搖搖欲墜(使用者點名):讓孩子看得出「再拆一根它就掉了」。
+     transform-origin 放底部,晃起來像被一根釘子吊著;reduced-motion 會關掉。 */
+  @keyframes wobbleLoose{0%,100%{transform:rotate(-.9deg)}50%{transform:rotate(.9deg)}}
+  .board.loose{animation:wobbleLoose .85s ease-in-out infinite;transform-origin:50% 100%}
+  /* (v2 之後形體就是多邊形本身:柱=細長多邊形、閂=橫長、獸皮=隆起輪廓——不再需要內襯) */
+  /* 44px:孩子用平板點得到的最小尺寸(a11y 觸控目標鐵則) */
+  .screw{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+    border:2px solid rgba(0,0,0,.5);cursor:pointer;padding:0;
+    display:grid;place-items:center;transition:opacity .18s ease,transform .18s ease}
+  .screw::after{content:"";width:22px;height:4px;background:rgba(255,255,255,.85);
+    border-radius:2px;box-shadow:0 7px 0 -1px rgba(0,0,0,.25)}
+  .screw.locked{cursor:not-allowed;filter:grayscale(.65) brightness(.5)}
+  .screw.locked::after{opacity:.4}
+  .screw.hint{outline:3px solid #fff;outline-offset:2px}
+  .screw.gone{opacity:0;transform:scale(.3)}
+  /* 擔子:一被某個顏色佔用,整個框就換成那個顏色(和上面的橛子一眼對得起來) */
+  .bins{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .bin{flex:1;min-width:62px;max-width:118px;height:62px;border:3px dashed var(--line);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;gap:6px;background:#1c150f;
+    transition:border-color .2s ease,background-color .2s ease}
+  .bin.taken{border-style:solid}
+  .slot{width:22px;height:22px;border-radius:50%;background:#2c2318;border:2px solid rgba(0,0,0,.35)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grow{flex:1}
+  .msg{text-align:center;font-size:15px;min-height:22px;color:var(--dim)}
+  .msg.bad{color:#e2895f} .msg.good{color:#8ed49b}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+  .legend i{width:12px;height:12px;border-radius:50%;display:inline-block;vertical-align:-1px;margin-right:3px}
+  /* 關卡地圖:蛇行節點(斑點羊風:白底圓卡 + 抹茶綠圓號碼) */
+  .map{display:flex;flex-direction:column;gap:10px}
+  .node{display:flex;align-items:center;gap:12px;background:#fffdf6;border:2px solid var(--line);
+    border-radius:18px;padding:12px 14px;cursor:pointer;text-align:left;color:var(--ink);
+    font-family:inherit;min-height:66px;width:100%;box-shadow:0 2px 6px rgba(90,70,30,.12)}
+  .node:nth-child(even){flex-direction:row-reverse;text-align:right}
+  .node.locked{opacity:.55;background:#f3ecd8;box-shadow:none}
+  .node.cleared{border-color:var(--grass2);background:#f4fae9}
+  .node .no{width:44px;height:44px;border-radius:50%;background:var(--grass);color:#2e451c;display:grid;place-items:center;
+    font-size:19px;font-weight:800;flex:0 0 auto;border:2px solid var(--grass2)}
+  .node.locked .no{background:#e5dcc2;border-color:#c9bd9a;color:#8a7a58}
+  .node .t{flex:1;min-width:0}
+  .node .t b{display:block;font-size:16px}
+  .node .t small{color:var(--dim);font-size:12px}
+  /* 年齡三檔:抹茶綠大按鈕、短標籤(斑點羊同款「幼/童/青」) */
+  .ages{display:flex;gap:10px;flex-wrap:wrap}
+  .age{flex:1;min-width:98px;background:var(--grass);border:2px solid var(--grass2);border-radius:16px;
+    padding:12px 10px;cursor:pointer;color:#2e451c;font-family:inherit;min-height:76px;text-align:center;
+    box-shadow:0 3px 0 rgba(70,100,40,.35);transition:transform .12s ease}
+  /* ★ 首頁滿版(使用者:選單太小、擠最上方):.wrap 本來就是 100dvh 直欄,
+     讓年齡畫面吃掉剩餘高度並垂直置中;按鈕加大到後排孩子也看得清。 */
+  #ageScreen{flex:1;display:flex;flex-direction:column;justify-content:center}
+  #ageScreen .age{min-height:128px;padding:18px 12px;border-radius:20px}
+  #ageScreen .age b{font-size:28px}
+  #ageScreen .age small{font-size:14px;margin-top:6px}
+  .age:active{transform:translateY(2px);box-shadow:none}
+  .age.on{background:#ffe9b0;border-color:var(--warn);color:#6b4a12;box-shadow:0 3px 0 rgba(160,110,30,.35)}
+  .age b{display:block;font-size:19px}
+  .age small{color:inherit;opacity:.85;font-size:11px;line-height:1.4;display:block;margin-top:3px}
+  dialog{background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:18px;
+    max-width:420px;padding:20px;line-height:1.8}
+  dialog::backdrop{background:rgba(60,45,20,.45)}
+  /* ── 不規則板形 v2(使用者拍板:全部疊在中間、遮擋也照真形狀)──
+     每片板的多邊形存在 levels.js 的 PILES(gen-pile.mjs 量測過難度才收);
+     .skin 的 clip-path 由 JS 從**同一份多邊形**算出來 → 畫的形狀=遮擋判定的形狀,零落差。 */
+  .board .skin{position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.28)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">🏺 以斯拉點交器皿</h1>
+    <button class="btn sm" id="bgm" title="開關音樂與音效">🎵</button>
+    <button class="btn sm" id="voice" title="開關朗讀">🔊</button>
+    <button class="btn sm" id="back">← 返回大廳</button>
+  </header>
+
+  <!-- ── 年齡檔選單(第一眼看到的畫面;照 tsum 七款:先選檔位,再進地圖;可愛風照斑點羊)── -->
+  <section id="ageScreen" class="card">
+    <p class="msg" style="margin:0;font-size:32px;font-weight:800;color:var(--ink)">🏺 以斯拉點交器皿</p>
+    <p class="msg" style="margin:2px 0 6px;font-size:16px">以斯拉記 8 ・ 器皿回家的路</p>
+    <p class="verse"><b>以斯拉記 8:28</b> 你們歸耶和華為聖,器皿也為聖;金銀是甘心獻給耶和華─你們列祖之神的。</p>
+    <div class="mascots" aria-hidden="true">
+      <i style="background:radial-gradient(circle at 35% 30%,#e0b73e,#8a6d13)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#c3cbd6,#5d6875)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#6f8290,#3d4a54)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#b0733a,#75461d)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#7b4397,#4e2760)"></i>
+    </div>
+    <p class="msg" style="margin:2px 0 6px">器皿們等著回家。選一群開始:</p>
+    <div class="ages" id="ages"></div>
+    <p class="msg" style="font-size:12px;margin-top:8px">選好之後,可以在關卡地圖按「← 換年齡檔」再改。</p>
+  </section>
+
+  <!-- ── 關卡地圖 ── -->
+  <section id="mapScreen" class="card" hidden>
+    <p class="msg" id="mapHead" style="margin:2px 0 0;font-size:20px;font-weight:800;color:var(--ink)"></p>
+    <p class="msg" id="mapSub" style="margin:2px 0 6px"></p>
+    <div class="map" id="map"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" id="cont"></button>
+      <span class="grow"></span>
+      <button class="btn sm" id="toAges">← 換年齡檔</button>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <button class="btn sm" id="unlock">🔑 老師:全部解鎖</button>
+      <span class="grow"></span>
+      <button class="btn sm" id="reset">↺ 清除進度</button>
+    </div>
+  </section>
+
+  <!-- ── 遊戲畫面 ── -->
+  <section id="gameScreen" hidden>
+    <p class="verse"><b id="ref"></b> <span id="verse"></span>
+      <button class="btn sm" id="readVerse" style="margin-left:6px">🔊 唸經文</button></p>
+    <div class="stage" id="stage"></div>
+    <div class="bins" id="bins" style="margin-top:10px"></div>
+    <p class="msg" id="msg"></p>
+    <div class="row">
+      <button class="btn" id="hint">💡 提示</button>
+      <button class="btn" id="retry">↻ 重來這關</button>
+      <button class="btn" id="toMap">🗺 關卡地圖</button>
+      <span class="grow"></span>
+      <button class="btn primary" id="next">下一站 →</button>
+    </div>
+    <div class="legend" id="legend" style="margin-top:6px"></div>
+  </section>
+
+  <!-- 📊 使用統計連結只放 6 個大廳入口(使用者拍板 2026-07-26);遊戲頁尾不放 -->
+
+</div>
+
+<dialog id="dlg"><div id="dlgBody"></div>
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+    <button class="btn primary" id="dlgOk">好</button>
+  </div>
+</dialog>
+
+<script type="module">
+import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
+import { indexLevel, initState, isExposed, exposedScrews, removeScrew, isWon, isStuck,
+         cloneState, stateKey, BIN_SIZE, pointInPoly as isInPoly } from './rules.js';
+import { speak, stopSpeak, voiceOn, setVoiceOn, verseLine } from './tts.js';
+import { sfx, startBgm, setTrack, setMuted, isMuted } from './audio.js';
+
+// 有關卡排不下版面時,寧可讓老師當場看到紅字,也不要無聲少一關
+if (LAYOUT_ERRORS.length) document.body.insertAdjacentHTML('afterbegin',
+  `<div class="verse" style="border-left-color:#c1443a">⚠ 有 ${LAYOUT_ERRORS.length} 關的版面排不下,` +
+  `這一關暫時不會出現在關卡地圖。請跑 <b>npm run check</b> 看詳情。<br><small>${LAYOUT_ERRORS.join('<br>')}</small></div>`);
+
+const $ = (id) => document.getElementById(id);
+const LS_DONE = 'ezra-screw-cleared';   // 已通關的關卡 id(陣列)
+const LS_UNLOCK = 'ezra-screw-unlock';  // 老師全部解鎖
+const LS_STARS = 'ezra-screw-stars';    // 每站幾顆星(照 tsum 七款:地圖上看得到 ★★★)
+const HOWTO = '把器皿一件一件拿起來,放進下面的箱子。上面還有東西壓著的,要先把上面的拿掉。同一個箱子裝滿三件同類的,祭司就抬去過秤了。';
+
+let ageId = 'kids', cleared = new Set(), allUnlocked = false, stars = {};
+let li = 0, level, idx, state, hintId = null, howtoSpoken = false, fallingId = null;
+// 這一次挑戰用了幾次提示、重來幾次 → 決定星星(從地圖進站時歸零,按「重來」不歸零)
+let attempt = { hints: 0, retries: 0 };
+
+try { ageId = AGE[localStorage.getItem(AGE_PREF_KEY)] ? localStorage.getItem(AGE_PREF_KEY) : 'kids'; } catch { /* 私密模式 */ }
+try { cleared = new Set(JSON.parse(localStorage.getItem(LS_DONE) || '[]')); } catch { cleared = new Set(); }
+try { allUnlocked = localStorage.getItem(LS_UNLOCK) === '1'; } catch { allUnlocked = false; }
+try { stars = JSON.parse(localStorage.getItem(LS_STARS) || '{}'); } catch { stars = {}; }
+
+const save = () => { try {
+  localStorage.setItem(LS_DONE, JSON.stringify([...cleared]));
+  localStorage.setItem(LS_UNLOCK, allUnlocked ? '1' : '0');
+  localStorage.setItem(LS_STARS, JSON.stringify(stars));
+} catch { /* 私密模式:玩得動,只是不記得 */ } };
+
+// 解鎖規則:第一站永遠開;通關過的開;通關過的下一站開;老師模式全開
+const unlocked = (i) => allUnlocked || i === 0 || cleared.has(LEVELS[i].id) ||
+  (i > 0 && cleared.has(LEVELS[i - 1].id));
+
+// ── 年齡檔選單(照 tsum 七款:獨立的第一個畫面,選完才進地圖)──
+function drawAges() {
+  $('ages').innerHTML = Object.values(AGE).map((a) => `
+    <button class="age${a.id === ageId ? ' on' : ''}" data-age="${a.id}">
+      <b>${a.emoji} ${a.short}</b><small>${a.sub}</small>
+    </button>`).join('');
+  $('ages').querySelectorAll('[data-age]').forEach((b) => {
+    b.onclick = () => {
+      ageId = b.dataset.age;
+      try { localStorage.setItem(AGE_PREF_KEY, ageId); } catch { /* noop */ }
+      sfx.tap(); startBgm();   // 第一次點擊=瀏覽器允許出聲的時機,BGM 從這裡開始
+      drawAges(); showMap();
+    };
+  });
+}
+
+// ── 關卡地圖(照 tsum 七款:🗺 標題 + 走到第幾站 + 蛇行節點 + ★★★ + ▶繼續)──
+/** 最遠可以玩的那一站(index) */
+const furthest = () => { let n = 0; for (let i = 0; i < LEVELS.length; i++) if (unlocked(i)) n = i; return n; };
+
+function drawMap() {
+  const a = getAge(ageId);
+  $('mapHead').textContent = '🗺 關卡地圖';
+  $('mapSub').textContent = `${a.emoji} ${a.label}・已走到第 ${furthest() + 1} 站`;
+  $('map').innerHTML = LEVELS.map((l, i) => {
+    const done = cleared.has(l.id), open = unlocked(i), st = stars[l.id] | 0;
+    const mark = open ? String(i + 1) : '🔒';
+    // 星星:玩過的站可以重玩拿星星(不用提示、不重來 = ★★★)
+    const starTxt = st ? '★★★'.slice(0, st) + '☆☆☆'.slice(0, 3 - st) : (open ? '☆☆☆' : '');
+    return `<button class="node${done ? ' cleared' : ''}${open ? '' : ' locked'}" data-i="${i}">
+      <span class="no">${mark}</span>
+      <span class="t"><b>${l.name}</b>
+        <small>${l.ref}・${l.screws.length} 件器皿・箱子 ${binsFor(l, ageId)} 個${done ? '・已點交' : open ? '' : '・先點交上一站'}</small>
+        <small style="color:#ffd54a;letter-spacing:2px">${starTxt}</small>
+      </span></button>`;
+  }).join('');
+  $('map').querySelectorAll('[data-i]').forEach((b) => {
+    const i = +b.dataset.i;
+    b.onclick = () => { if (unlocked(i)) load(i); else say2('先把上一站拆完,或請老師按「全部解鎖」。'); };
+  });
+  $('cont').textContent = `▶ 繼續:第 ${furthest() + 1} 站`;
+}
+
+function say2(t) { $('mapSub').textContent = t; }
+
+function showAges() {
+  stopSpeak();
+  $('ageScreen').hidden = false; $('mapScreen').hidden = true; $('gameScreen').hidden = true;
+  $('title').textContent = '🏺 以斯拉點交器皿';
+  drawAges();
+}
+
+function showMap() {
+  stopSpeak();
+  $('ageScreen').hidden = true; $('mapScreen').hidden = false; $('gameScreen').hidden = true;
+  $('title').textContent = '🏺 以斯拉點交器皿';
+  drawMap();
+}
+
+// ── 遊戲 ──
+/** fresh=true(從地圖/下一站進來)才把星星計數歸零;按「重來這關」不歸零(重來要付代價) */
+function load(i, fresh = true) {
+  if (fresh) attempt = { hints: 0, retries: 0 };
+  li = i; level = LEVELS[i]; idx = indexLevel(level);
+  setTrack(level.id);   // ★ 每一關不同曲(BGM 百曲庫:同一關永遠同一首)
+  state = initState(level, binsFor(level, ageId));
+  hintId = null; fallingId = null;
+  $('ageScreen').hidden = true; $('mapScreen').hidden = true; $('gameScreen').hidden = false;
+  $('title').textContent = level.name;
+  $('ref').textContent = level.ref;
+  $('verse').textContent = level.verse;
+  $('next').style.display = 'none';
+  say(level.hint, '');
+  draw();
+  // 幼稚園檔:自動唸一次玩法(給還不識字的孩子);其餘檔位不吵
+  if (getAge(ageId).speakHowto && !howtoSpoken) { howtoSpoken = true; setTimeout(() => speak(HOWTO), 350); }
+}
+
+function say(t, cls) { const m = $('msg'); m.textContent = t; m.className = 'msg ' + (cls || ''); }
+
+// 材料即經文:每片板照它在聖經裡的材質上色(零美術檔,純 CSS 漸層)。
+// 出 26:1/26:31 幔子=藍紫朱紅+撚的細麻 · 26:7 山羊毛 · 26:14 染紅公羊皮/海狗皮 ·
+// 26:19 銀座 · 26:29 板與閂包金 · 27:9-11 院子細麻帷子與銅座 · 民 4:6 純藍色的毯子。
+const MAT = {
+  linen:  'linear-gradient(160deg,#e6dcc2,#c6b998)',
+  veil:   'linear-gradient(180deg,transparent 0 16%,rgba(47,111,181,.55) 16% 24%,transparent 24% 42%,' +
+          'rgba(123,67,151,.55) 42% 50%,transparent 50% 68%,rgba(184,50,39,.55) 68% 76%,transparent 76%),' +
+          'linear-gradient(160deg,#e6dcc2,#c6b998)',
+  goat:   'repeating-linear-gradient(104deg,#6d5d47 0 6px,#5a4c3a 6px 12px)',
+  ram:    'linear-gradient(160deg,#8e3b2b,#5c2317)',
+  seal:   'radial-gradient(circle at 26% 22%,rgba(0,0,0,.28) 5px,transparent 6px),' +
+          'radial-gradient(circle at 68% 62%,rgba(0,0,0,.24) 6px,transparent 7px),' +
+          'linear-gradient(160deg,#7c7666,#524d40)',
+  wood:   'repeating-linear-gradient(92deg,#6f5636 0 9px,#634c2f 9px 18px)',
+  gilt:   'linear-gradient(160deg,#b98f34,#7d5f1c)',   // 皂莢木包金:比純金器具略沉
+  gold:   'linear-gradient(160deg,#e3c55e,#a4801d)',
+  silver: 'linear-gradient(160deg,#d7dce4,#949dab)',
+  bronze: 'linear-gradient(160deg,#b0733a,#75461d)',
+  rope:   'repeating-linear-gradient(46deg,#b1935e 0 5px,#9a814e 5px 10px)',
+  bluecloth: 'linear-gradient(160deg,#2f6fb5,#1b4272)',
+};
+
+// v2「中央堆疊」:每片板就是一個不規則多邊形(levels.js 的 PILES,gen-pile.mjs 量測過),
+// 皮(.skin)用 clip-path 剪出**同一份**多邊形——畫出來的形狀=遮擋判定的形狀,零落差。
+function polyClip(b) {
+  const { x, y, w, h } = b.bbox;
+  return 'polygon(' + b.poly.map(([px, py]) =>
+    `${(((px - x) / w) * 100).toFixed(1)}% ${(((py - y) / h) * 100).toFixed(1)}%`).join(',') + ')';
+}
+
+function draw() {
+  const st = $('stage'); st.innerHTML = '';
+  const alive = [...level.boards].filter((b) => state.boards.has(b.id));
+  for (const b of [...level.boards].sort((x, y) => x.layer - y.layer)) {
+    const el = document.createElement('div');
+    const off = !state.boards.has(b.id);
+    const justFell = b.id === fallingId;
+    // 只剩最後一根橛子 → 搖搖欲墜(使用者點名)
+    const left = idx.onBoard.get(b.id).filter((id) => state.screws.has(id)).length;
+    // ★ 每次 tap 都整個重畫,所以「剛拆完的那片」要先畫在原位、下一幀才加 .gone,
+    //   transition 才會真的跑。直接生成就帶 .gone = 沒有狀態變化 = 瞬間消失(改前就是這樣)。
+    el.className = 'board' + (off && !justFell ? ' gone settled' : '') + (!off && left === 1 ? ' loose' : '');
+    el.style.cssText += `left:${b.bbox.x}%;top:${b.bbox.y}%;width:${b.bbox.w}%;height:${b.bbox.h}%;
+      border:0;background:none;z-index:${10 + b.layer};
+      filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))`;
+    // 標籤放在板的重心;被更上層的板蓋住時先不顯示(拆掉上面它就浮出來=名字也跟著「出土」)
+    const buried = alive.some((o) => o.layer > b.layer && isInPoly(b.anchor[0], b.anchor[1], o.poly));
+    const tx = ((b.anchor[0] - b.bbox.x) / b.bbox.w) * 100, ty = ((b.anchor[1] - b.bbox.y) / b.bbox.h) * 100;
+    el.innerHTML = `<i class="skin" style="background:${MAT[b.mat] || MAT.wood};clip-path:${polyClip(b)}"></i>` +
+      (buried ? '' : `<span class="tag" style="position:absolute;left:${tx.toFixed(0)}%;top:${ty.toFixed(0)}%;transform:translate(-50%,-50%)">${b.label}</span>`);
+    st.appendChild(el);
+    if (justFell) requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('gone')));
+  }
+  for (const s of level.screws) {
+    const gone = !state.screws.has(s.id);
+    const open = !gone && isExposed(idx, state, s.id);
+    const c = COLORS[s.color];
+    const el = document.createElement('button');
+    el.className = 'screw' + (gone ? ' gone' : open ? '' : ' locked') + (hintId === s.id ? ' hint' : '');
+    el.style.cssText += `left:${s.x}%;top:${s.y}%;background:radial-gradient(circle at 35% 30%,${c.hex},${c.dark});
+      z-index:${60 + idx.board.get(s.board).layer}`;
+    el.title = open ? `${c.name}(可拆)` : `${c.name}(上面還有東西壓著)`;
+    el.setAttribute('aria-label', el.title);
+    if (!gone) el.onclick = () => tap(s.id, open);
+    st.appendChild(el);
+  }
+  drawBins();
+  $('legend').innerHTML = Object.entries(COLORS)
+    .map(([, c]) => `<span><i style="background:${c.hex}"></i>${c.name}(${c.tribe})</span>`).join('');
+}
+
+function drawBins() {
+  $('bins').innerHTML = state.bins.map((b) => {
+    const c = b ? COLORS[b.color] : null;
+    const slots = Array.from({ length: BIN_SIZE }, (_, i) =>
+      `<span class="slot" style="${b && i < b.count ? `background:${c.hex};border-color:${c.dark}` : ''}"></span>`).join('');
+    // 擔子被某個顏色佔用時,整個框換成那個顏色 → 和上面的橛子一眼對得起來
+    const style = c ? `border-color:${c.hex};background:${c.dark}33` : '';
+    const label = c ? ` title="${c.tribe}的擔子:${c.name}"` : ' title="空擔子"';
+    return `<div class="bin${b ? ' taken' : ''}" style="${style}"${label}>${slots}</div>`;
+  }).join('');
+}
+
+function tap(id, open) {
+  if (!open) { sfx.locked(); say('這根還被上面的東西壓著——先把壓在上面的拆掉。', 'bad'); return; }
+  hintId = null;
+  const before = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);   // 音效用:扛走=總數變少
+  const r = removeScrew(idx, state, id);
+  fallingId = r.boardCleared || null;   // 這一拔讓哪片板子掉了 → 給掉落動畫用
+  if (!r.ok) { draw(); return lose('箱子都塞滿了不同種類,再也放不下——「警醒看守」就是要看準了才拿(拉 8:29)。'); }
+  const after = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);
+  if (after < before) sfx.carry();      // 滿三件同類,祭司抬去過秤了
+  else sfx.pull();
+  if (r.boardCleared) sfx.fall();
+  draw();
+  fallingId = null;   // 動畫已排程,清掉免得下次重畫又演一次
+  if (isWon(state)) return win();
+  if (isStuck(idx, state)) return lose('沒有一根拔得出來了。');
+  say('', '');
+}
+
+function win() {
+  sfx.win();
+  cleared.add(level.id);
+  // ★ 星星(照 tsum 七款在地圖上顯示):不用提示、不重來 = ★★★,每用一次扣一顆,最少 1 顆。
+  //   只往上記錄,重玩拿到更多顆才覆蓋(tsum 的「重玩拿星星」)。
+  const got = Math.max(1, 3 - attempt.hints - attempt.retries);
+  const best = Math.max(stars[level.id] | 0, got);
+  const better = best > (stars[level.id] | 0);
+  stars[level.id] = best;
+  save();
+  ping(`${SITE}-done`);
+  const starLine = ` ${'★'.repeat(got)}${'☆'.repeat(3 - got)}` +
+    (got < 3 ? '(不用提示、不重來就能拿三顆星)' : '') + (better ? '' : '(之前拿過更多顆,保留最好的)');
+  if (li + 1 < LEVELS.length) { say('點交完成!祭司把這一批抬上路。' + starLine, 'good'); $('next').style.display = ''; }
+  else {
+    say('全部點交完成 —— 器皿到家了。', 'good');
+    show(`<h2 style="margin:0 0 8px">🎉 六站全部點交完成</h2>
+      <p><b>以斯拉記 8:34</b> 當時都點了數目,按著分量寫在冊上。</p>
+      <p style="color:var(--dim);font-size:14px">從巴比倫到耶路撒冷,四個月的路,金銀器皿共五千四百件、一件不少(拉 1:11)——
+      因為「你們歸耶和華為聖,器皿也為聖」(拉 8:28)。神所交託的,要警醒看守、如數交回。</p>`);
+  }
+}
+
+function lose(why) { sfx.stuck(); ping(`${SITE}-stuck`); say(why + ' 按「↻ 重來這關」再試一次。', 'bad'); }
+
+// 提示:用同一份規則搜一次,找出「拆了還有救」的那一根
+function hint() {
+  const budget = 200000; let n = 0; const seen = new Set();
+  const dfs = (st) => {
+    if (isWon(st)) return true;
+    if (++n > budget) return false;
+    const k = stateKey(level, st);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    for (const id of exposedScrews(idx, st)) {
+      const nx = cloneState(st);
+      if (!removeScrew(idx, nx, id).ok) continue;
+      if (dfs(nx)) return true;
+    }
+    return false;
+  };
+  for (const id of exposedScrews(idx, state)) {
+    const nx = cloneState(state);
+    if (!removeScrew(idx, nx, id).ok) continue;
+    n = 0; seen.clear();
+    if (dfs(nx)) { hintId = id; attempt.hints++; draw();
+      say('白框那根,拆它就對了。(用提示會少一顆星)', ''); speak(level.hint); return; }
+  }
+  say('這局已經沒有救了,按「↻ 重來這關」。', 'bad');
+}
+
+function show(html) { $('dlgBody').innerHTML = html; $('dlg').showModal(); }
+function paintVoiceBtn() { const b = $('voice'); const on = voiceOn(); b.textContent = on ? '🔊' : '🔇'; b.classList.toggle('on', on); }
+function paintBgmBtn() { const b = $('bgm'); const on = !isMuted(); b.textContent = on ? '🎵' : '🚫'; b.classList.toggle('on', on); }
+
+$('dlgOk').onclick = () => $('dlg').close();
+$('retry').onclick = () => { attempt.retries++; load(li, false); };   // 重來要付星星的代價
+$('hint').onclick = hint;
+$('toMap').onclick = showMap;
+$('toAges').onclick = showAges;
+$('cont').onclick = () => load(furthest());
+$('next').onclick = () => load(Math.min(LEVELS.length - 1, li + 1));
+$('readVerse').onclick = () => speak(verseLine(level.ref, level.verse));
+$('voice').onclick = () => { setVoiceOn(!voiceOn()); paintVoiceBtn(); };
+$('bgm').onclick = () => { setMuted(!isMuted()); paintBgmBtn(); };
+$('unlock').onclick = () => { allUnlocked = !allUnlocked; save(); drawMap(); say2(allUnlocked ? '已全部解鎖(老師模式)。' : '回到照順序解鎖。'); };
+$('reset').onclick = () => { cleared.clear(); stars = {}; allUnlocked = false; save(); drawMap(); say2('進度與星星都清掉了,從第一站重新開始。'); };
+$('back').onclick = () => { location.href = 'https://hfpc-bible-games.summer09201017.workers.dev/'; };
+
+// ── play-stats 匿名計數(遊戲層零個資)──
+const SITE = 'ezra-screw';
+function ping(key, t) {
+  try {
+    if (['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:') return;
+    const u = `https://hfpc-play-stats.summer09201017.workers.dev/api/ping?g=${key}${t ? '&t=' + t : ''}`;
+    if (navigator.sendBeacon) navigator.sendBeacon(u); else fetch(u, { mode: 'no-cors' });
+  } catch { /* 統計掛了也不能影響遊戲 */ }
+}
+try {
+  const k = 'ps-last-' + SITE, now = Date.now(), last = +(localStorage.getItem(k) || 0);
+  if (now - last > 600000) { localStorage.setItem(k, String(now)); ping(SITE); }
+} catch { ping(SITE); }
+const t0 = Date.now(); let sentDwell = false;
+const bye = () => {
+  if (sentDwell) return; sentDwell = true;
+  const sec = Math.round((Date.now() - t0) / 1000);
+  if (sec >= 3 && sec <= 1800) ping(`${SITE}-dwell`, sec);
+};
+addEventListener('pagehide', bye);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') bye(); });
+
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+
+paintVoiceBtn();
+paintBgmBtn();
+showAges();  // ★ 照 tsum 七款:進站第一眼=年齡檔選單(教室裡換一個孩子就換一檔),選完進地圖
+</script>
+</body>
+</html>
